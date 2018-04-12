@@ -132,7 +132,7 @@ instance MkSwitch#(function a f(function b f(Bit#(n) val)), n, b)
          provisos (MkSwitch#(a, n, b));
   function mkSwitch(val, acts, f) = mkSwitch(val, Cons(f(val), acts));
 endinstance
-function a switch(Bit#(n) val) provisos (MkSwitch#(a, n, Guarded#(x)), RulesGenerator#(x));
+function a switch(Bit#(n) val) provisos (MkSwitch#(a, n, b));
   return mkSwitch(val, Nil);
 endfunction
 // RulesGenerator typeclass
