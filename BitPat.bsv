@@ -110,6 +110,17 @@ endfunction
 /////////////////////
 // Utility classes //
 ////////////////////////////////////////////////////////////////////////////////
+// guarded type
+typedef struct {
+  Bool guard;
+  a val;
+} Guarded#(type a);
+// when function, applying a pattern to a subject and guarding the return value
+// of the passed continuation
+function Guarded#(a) when(BitPat#(n, t, a) p, t f, Bit#(n) subject);
+  Tuple2#(Bool, a) res = p(subject, f);
+  return Guarded { guard: tpl_1(res), val: tpl_2(res) };
+endfunction
 // switch var args function typeclass
 typeclass MkSwitch#(type a, type n, type b) dependencies ((a, n) determines b);
   function a mkSwitch(Bit#(n) val, List#(b) act);
@@ -124,16 +135,10 @@ endinstance
 function a switch(Bit#(n) val) provisos (MkSwitch#(a, n, Guarded#(x)), GuardedEntity#(x));
   return mkSwitch(val, Nil);
 endfunction
-// guarded type
-typedef struct {
-  Bool guard;
-  a val;
-} Guarded#(type a);
 // guarded entity class
 typeclass GuardedEntity#(type a);
   function Bool getGuard(Guarded#(a) x);
   function a getEntity(Guarded#(a) x);
-  function Guarded#(a) when(BitPat#(n, t, a) p, t f, Bit#(n) subject);
   module genRules#(List#(Guarded#(a)) xs) (Tuple2#(Rules, PulseWire));
 endtypeclass
 
@@ -144,10 +149,6 @@ endtypeclass
 instance GuardedEntity#(Action);
   function Bool getGuard(Guarded#(Action) x) = x.guard;
   function Action getEntity(Guarded#(Action) x) = x.val;
-  function Guarded#(Action) when(BitPat#(n, t, Action) p, t f, Bit#(n) subject);
-    Tuple2#(Bool, Action) res = p(subject, f);
-    return Guarded { guard: tpl_1(res), val: tpl_2(res) };
-  endfunction
   module genRules#(List#(Guarded#(Action)) xs) (Tuple2#(Rules, PulseWire));
     PulseWire done <- mkPulseWireOR;
     function Rules createRule(Guarded#(Action) x) = rules
@@ -166,10 +167,6 @@ typedef TLog#(`MaxListDepth) MaxDepthSz;
 instance GuardedEntity#(List#(Action));
   function Bool getGuard(Guarded#(List#(Action)) x) = x.guard;
   function List#(Action) getEntity(Guarded#(List#(Action)) x) = x.val;
-  function Guarded#(List#(Action)) when(BitPat#(n, t, List#(Action)) p, t f, Bit#(n) subject);
-    Tuple2#(Bool, List#(Action)) res = p(subject, f);
-    return Guarded { guard: tpl_1(res), val: tpl_2(res) };
-  endfunction
   module genRules#(List#(Guarded#(List#(Action))) xs) (Tuple2#(Rules, PulseWire));
     Reg#(Bit#(MaxDepthSz)) step <- mkReg(0);
     PulseWire done <- mkPulseWireOR;
