@@ -121,37 +121,37 @@ instance MkSwitch#(function a f(function b f(Bit#(n) val)), n, b)
          provisos (MkSwitch#(a, n, b));
   function mkSwitch(val, acts, f) = mkSwitch(val, Cons(f(val), acts));
 endinstance
-function a switch(Bit#(n) val) provisos (MkSwitch#(a, n, x), GuardedEntity#(x, x_body));
+function a switch(Bit#(n) val) provisos (MkSwitch#(a, n, Guarded#(x)), GuardedEntity#(x));
   return mkSwitch(val, Nil);
 endfunction
+// guarded type
+typedef struct {
+  Bool guard;
+  a val;
+} Guarded#(type a);
 // guarded entity class
-typeclass GuardedEntity#(type a, type b)
-  dependencies (a determines b, b determines a);
-  function Bool getGuard(a x);
-  function b getEntity(a x);
-  function a when(BitPat#(n, t, b) p, t f, Bit#(n) subject);
-  module genRules#(List#(a) xs) (Tuple2#(Rules, PulseWire));
+typeclass GuardedEntity#(type a);
+  function Bool getGuard(Guarded#(a) x);
+  function a getEntity(Guarded#(a) x);
+  function Guarded#(a) when(BitPat#(n, t, a) p, t f, Bit#(n) subject);
+  module genRules#(List#(Guarded#(a)) xs) (Tuple2#(Rules, PulseWire));
 endtypeclass
 
 ////////////
 // Action //
 ////////////////////////////////////////////////////////////////////////////////
-typedef struct {
-  Bool guard;
-  Action body;
-} GuardedAction;
 // GuardedEntity instance
-instance GuardedEntity#(GuardedAction, Action);
-  function Bool getGuard(GuardedAction x) = x.guard;
-  function Action getEntity(GuardedAction x) = x.body;
-  function GuardedAction when(BitPat#(n, t, Action) p, t f, Bit#(n) subject);
+instance GuardedEntity#(Action);
+  function Bool getGuard(Guarded#(Action) x) = x.guard;
+  function Action getEntity(Guarded#(Action) x) = x.val;
+  function Guarded#(Action) when(BitPat#(n, t, Action) p, t f, Bit#(n) subject);
     Tuple2#(Bool, Action) res = p(subject, f);
-    return GuardedAction { guard: tpl_1(res), body: tpl_2(res) };
+    return Guarded { guard: tpl_1(res), val: tpl_2(res) };
   endfunction
-  module genRules#(List#(GuardedAction) xs) (Tuple2#(Rules, PulseWire));
+  module genRules#(List#(Guarded#(Action)) xs) (Tuple2#(Rules, PulseWire));
     PulseWire done <- mkPulseWireOR;
-    function Rules createRule(GuardedAction x) = rules
-      rule guarded_rule (x.guard); x.body; done.send; endrule
+    function Rules createRule(Guarded#(Action) x) = rules
+      rule guarded_rule (x.guard); x.val; done.send; endrule
     endrules;
     return tuple2(fold(rJoin, map(createRule, xs)), done);
   endmodule
@@ -160,30 +160,26 @@ endinstance
 ///////////////////
 // List#(Action) //
 ////////////////////////////////////////////////////////////////////////////////
-typedef struct {
-  Bool guard;
-  List#(Action) body;
-} GuardedActionList;
 `define MaxListDepth 256
 typedef TLog#(`MaxListDepth) MaxDepthSz;
 // GuardedEntity instance
-instance GuardedEntity#(GuardedActionList, List#(Action));
-  function Bool getGuard(GuardedActionList x) = x.guard;
-  function List#(Action) getEntity(GuardedActionList x) = x.body;
-  function GuardedActionList when(BitPat#(n, t, List#(Action)) p, t f, Bit#(n) subject);
+instance GuardedEntity#(List#(Action));
+  function Bool getGuard(Guarded#(List#(Action)) x) = x.guard;
+  function List#(Action) getEntity(Guarded#(List#(Action)) x) = x.val;
+  function Guarded#(List#(Action)) when(BitPat#(n, t, List#(Action)) p, t f, Bit#(n) subject);
     Tuple2#(Bool, List#(Action)) res = p(subject, f);
-    return GuardedActionList { guard: tpl_1(res), body: tpl_2(res) };
+    return Guarded { guard: tpl_1(res), val: tpl_2(res) };
   endfunction
-  module genRules#(List#(GuardedActionList) xs) (Tuple2#(Rules, PulseWire));
+  module genRules#(List#(Guarded#(List#(Action))) xs) (Tuple2#(Rules, PulseWire));
     Reg#(Bit#(MaxDepthSz)) step <- mkReg(0);
     PulseWire done <- mkPulseWireOR;
-    function Rules createRule(GuardedActionList x);
+    function Rules createRule(Guarded#(List#(Action)) x);
       Rules allRules = emptyRules;
-      for (Integer i = 0; i < length(x.body); i = i + 1)
+      for (Integer i = 0; i < length(x.val); i = i + 1)
         allRules = rJoin(allRules, rules
           rule guarded_rule (x.guard && step == fromInteger(i));
-            x.body[i];
-            if (step == fromInteger(length(x.body) - 1)) begin
+            x.val[i];
+            if (step == fromInteger(length(x.val) - 1)) begin
               step <= 0;
               done.send();
             end else step <= step + 1;
