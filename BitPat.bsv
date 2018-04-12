@@ -132,23 +132,19 @@ instance MkSwitch#(function a f(function b f(Bit#(n) val)), n, b)
          provisos (MkSwitch#(a, n, b));
   function mkSwitch(val, acts, f) = mkSwitch(val, Cons(f(val), acts));
 endinstance
-function a switch(Bit#(n) val) provisos (MkSwitch#(a, n, Guarded#(x)), GuardedEntity#(x));
+function a switch(Bit#(n) val) provisos (MkSwitch#(a, n, Guarded#(x)), RulesGenerator#(x));
   return mkSwitch(val, Nil);
 endfunction
-// guarded entity class
-typeclass GuardedEntity#(type a);
-  function Bool getGuard(Guarded#(a) x);
-  function a getEntity(Guarded#(a) x);
+// RulesGenerator typeclass
+typeclass RulesGenerator#(type a);
   module genRules#(List#(Guarded#(a)) xs) (Tuple2#(Rules, PulseWire));
 endtypeclass
 
 ////////////
 // Action //
 ////////////////////////////////////////////////////////////////////////////////
-// GuardedEntity instance
-instance GuardedEntity#(Action);
-  function Bool getGuard(Guarded#(Action) x) = x.guard;
-  function Action getEntity(Guarded#(Action) x) = x.val;
+// RulesGenerator instance
+instance RulesGenerator#(Action);
   module genRules#(List#(Guarded#(Action)) xs) (Tuple2#(Rules, PulseWire));
     PulseWire done <- mkPulseWireOR;
     function Rules createRule(Guarded#(Action) x) = rules
@@ -163,10 +159,8 @@ endinstance
 ////////////////////////////////////////////////////////////////////////////////
 `define MaxListDepth 256
 typedef TLog#(`MaxListDepth) MaxDepthSz;
-// GuardedEntity instance
-instance GuardedEntity#(List#(Action));
-  function Bool getGuard(Guarded#(List#(Action)) x) = x.guard;
-  function List#(Action) getEntity(Guarded#(List#(Action)) x) = x.val;
+// RulesGenerator instance
+instance RulesGenerator#(List#(Action));
   module genRules#(List#(Guarded#(List#(Action))) xs) (Tuple2#(Rules, PulseWire));
     Reg#(Bit#(MaxDepthSz)) step <- mkReg(0);
     PulseWire done <- mkPulseWireOR;
