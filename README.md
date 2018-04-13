@@ -1,6 +1,32 @@
 # BitPat
 BitPat is a bit-string pattern matching library for Bluespec, inspired by [Morten Rhiger's "Type-Safe Pattern Combinators"](https://www.cambridge.org/core/journals/journal-of-functional-programming/article/type-safe-pattern-combinators/1E3D0890F2ED1B70F80722A732756910).
 
+This library can help in writing intruction decoders in a simple and concise way:
+```bsv
+
+function Action add(Bit#(5) rs2, Bit#(5) rs1, Bit#(5) rd) = action
+  $display("time %0t - add %0d, %0d, %0d", $time, rd, rs1, rs2);
+endaction;
+
+function Action addi(Bit#(12) imm, Bit#(5) rs1, Bit#(5) rd) = action
+  $display("time %0t - addi %0d, %0d, %0d", $time, rd, rs1, imm);
+endaction;
+
+module top ();
+  Bit#(32) instr = 32'b0000000_00001_00010_000_00011_0110011;
+  match {.allRules, .done} <- genRules(
+    switch(instr,
+      when(pat(n(7'b0000000), v, v, n(3'b000), v, n(7'b0110011)), add),
+      when(pat(v,  v, n(3'b000), v, n(7'b0010011)), addi)
+  );
+  addRules(allRules);
+  rule stopSim (done);
+    $display("time %0t - terminating simulation", $time);
+    $finish(0);
+  endrule
+endmodule
+```
+
 The library sources are contained in the `BitPat.bsv` file. Two examples, `Example1.bsv` and `Example2.bsv`, are provided and can be built on a system with a working instalation of Bluespec by typing make. They can each be run with `./example1` and `./example2` respectively.
 
 ## General working principle
