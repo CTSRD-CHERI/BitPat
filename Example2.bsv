@@ -61,9 +61,11 @@ module top ();
   //Bit#(32) instr = 32'b0000000_00001_00010_000_00011_0010011; // maps to addi with rd != 5
   //Bit#(32) instr = 32'b0000000_00001_00101_000_00011_0010011; // maps to addi with rd == 5
 
-  // call the RulesGenerator genRules module to create rules based on the
-  // List#(Guarded#(List#(Action))) returned by switch
-  match {.allRules, .done} <- genRules(
+  // call the RulesGenerator typeclass' module directly module to create rules
+  // based on the List#(Guarded#(List#(Action))) returned by switch and get a
+  // handle back on those rules and their done signal for explicit scheduling by
+  // the user
+  match {.allRules, .done} <- rulesGenerator(
     switch(instr,
       when(pat(n(7'b0), sv(5), sv(5), n(3'b0), sv(5), n(7'b0110011)), add),
       /*

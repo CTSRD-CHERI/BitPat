@@ -137,15 +137,26 @@ function a switch(Bit#(n) val) provisos (MkSwitch#(a, n, b));
 endfunction
 // RulesGenerator typeclass
 typeclass RulesGenerator#(type a);
-  module genRules#(List#(Guarded#(a)) xs) (Tuple2#(Rules, PulseWire));
+  module rulesGenerator#(List#(Guarded#(a)) xs) (Tuple2#(Rules, PulseWire));
 endtypeclass
+// genRules module
+module genRules#(List#(Guarded#(a)) xs) (Empty) provisos (RulesGenerator#(a));
+  match {.allRules, .done} <- rulesGenerator(xs);
+  addRules(allRules);
+  /*
+  rule stopSim (done);
+    $display("time %0t - terminating simulation", $time);
+    $finish(0);
+  endrule
+  */
+endmodule
 
 ////////////
 // Action //
 ////////////////////////////////////////////////////////////////////////////////
 // RulesGenerator instance
 instance RulesGenerator#(Action);
-  module genRules#(List#(Guarded#(Action)) xs) (Tuple2#(Rules, PulseWire));
+  module rulesGenerator#(List#(Guarded#(Action)) xs) (Tuple2#(Rules, PulseWire));
     PulseWire done <- mkPulseWireOR;
     function Rules createRule(Guarded#(Action) x) = rules
       rule guarded_rule (x.guard); x.val; done.send; endrule
@@ -161,7 +172,7 @@ endinstance
 typedef TLog#(`MaxListDepth) MaxDepthSz;
 // RulesGenerator instance
 instance RulesGenerator#(List#(Action));
-  module genRules#(List#(Guarded#(List#(Action))) xs) (Tuple2#(Rules, PulseWire));
+  module rulesGenerator#(List#(Guarded#(List#(Action))) xs) (Tuple2#(Rules, PulseWire));
     Reg#(Bit#(MaxDepthSz)) step <- mkReg(0);
     PulseWire done <- mkPulseWireOR;
     function Rules createRule(Guarded#(List#(Action)) x);

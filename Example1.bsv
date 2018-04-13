@@ -59,9 +59,9 @@ module top ();
   //Bit#(32) instr = 32'b0000000_00001_00010_000_00011_0010011; // maps to addi with rd != 5
   //Bit#(32) instr = 32'b0000000_00001_00101_000_00011_0010011; // maps to addi with rd == 5
 
-  // call the RulesGenerator genRules module to create rules based on the
+  // call the genRules module to create rules based on the
   // List#(Guarded#(Action)) returned by switch
-  match {.allRules, .done} <- genRules(
+  genRules(
     switch(instr,
       when(pat(n(7'b0), sv(5), sv(5), n(3'b0), sv(5), n(7'b0110011)), add),
       /*
@@ -80,8 +80,10 @@ module top ();
         addi_rdnot5)
     )
   );
-  addRules(allRules);
-  rule stopSim (done);
+  // terminate simulation after a few cycles
+  Reg#(Bit#(4)) cycles <- mkReg(0);
+  rule countCycles; cycles <= cycles + 1; endrule
+  rule stopSim (cycles == 10);
     $display("time %0t - terminating simulation", $time);
     $finish(0);
   endrule
