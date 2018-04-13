@@ -53,18 +53,14 @@ function Bool neq (Bit#(n) x, Bit#(n) y) = x != y;
 function Bool guardEQ5 (Bit#(32) x) = x[19:15] == 5;
 function Bool guardNEQ5 (Bit#(32) x) = x[19:15] != 5;
 
-// Note: the BitPat GuardedEntity typeclass has an instance provided for the BSV
-// Action type and for the List#(Action) type. Using BitPat can be done with a
-// single instance of GuardedEntity, that is, one cannot mix
-// Action and List#(Action) in a single genRules(switch(...)) construct.
-
 module top ();
   // some case subjects.
   Bit#(32) instr = 32'b0000000_00001_00010_000_00011_0110011; // maps to add
   //Bit#(32) instr = 32'b0000000_00001_00010_000_00011_0010011; // maps to addi with rd != 5
   //Bit#(32) instr = 32'b0000000_00001_00101_000_00011_0010011; // maps to addi with rd == 5
 
-  // call the GuardedEntity genRules method to create rules based on the List#(Action)
+  // call the RulesGenerator genRules module to create rules based on the
+  // List#(Guarded#(Action)) returned by switch
   match {.allRules, .done} <- genRules(
     switch(instr,
       when(pat(n(7'b0), sv(5), sv(5), n(3'b0), sv(5), n(7'b0110011)), add),

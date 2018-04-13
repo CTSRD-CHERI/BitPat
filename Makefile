@@ -28,15 +28,13 @@
 #
 
 BSC = bsc
-BSVPATH = +:$(RECIPEDIR)
-BSCFLAGS = -p $(BSVPATH)
 
 all: $(patsubst Example%.bsv, example%, $(wildcard Example*.bsv))
 
 example%: Example%.bsv
 	mkdir -p bdir-$@ simdir-$@
-	$(BSC) $(BSCFLAGS) -bdir bdir-$@ -simdir simdir-$@ -u -sim -g top $^
-	$(BSC) $(BSCFLAGS) -bdir bdir-$@ -simdir simdir-$@ -sim -e top -o $@
+	$(BSC) -bdir bdir-$@ -simdir simdir-$@ -u -sim -g top $^
+	$(BSC) -bdir bdir-$@ -simdir simdir-$@ -sim -e top -o $@
 
 .PHONY: clean
 clean:
