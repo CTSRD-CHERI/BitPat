@@ -1,6 +1,8 @@
 # BitPat
 BitPat is a bit-string pattern matching library for Bluespec, inspired by [Morten Rhiger's "Type-Safe Pattern Combinators"](https://www.cambridge.org/core/journals/journal-of-functional-programming/article/type-safe-pattern-combinators/1E3D0890F2ED1B70F80722A732756910).
 
+The library sources are contained in the `BitPat.bsv` file. Two examples, `Example1.bsv` and `Example2.bsv`, are provided and can be built on a system with a working instalation of Bluespec by typing make. They can each be run with `./example1` and `./example2` respectively.
+
 ## General working principle
 The BitPat Bluespec module provides bit-pattern combinators for composing a pattern to match a tested bit string.
 ```bsv
