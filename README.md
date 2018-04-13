@@ -38,7 +38,7 @@ typedef function Tuple2#(Bool, t1) f(Bit#(n) x, t0 k)
 A `BitPat` object can be created using the `pat` function with a combination of pattern combinators.
 For example, `pat(n(8'b00010011))` is a pattern that will match a `Bit#(8)` value of `8'b00010011` using the `n` combinator.
 Specific fields of a bit string can be extracted using the `v` combinator: `pat(n(3'b000),v,n(2'b11))`.
-See the [Pattern combinators](#Pattern-combinators) section for details on available pattern combinators. The `Guarded` polymorphic type is used to represent the result of applying a bit-pattern to a bit string.
+See the [Pattern combinators](#pattern-combinators) section for details on available pattern combinators. The `Guarded` polymorphic type is used to represent the result of applying a bit-pattern to a bit string.
 ```bsv
 typedef struct {
   Bool guard;
@@ -52,7 +52,7 @@ The `when` function
 function Guarded#(a) when(BitPat#(n, t, a) p, t f, Bit#(n) s);
 ```
 is used to apply a `BitPat`. It recieves a `BitPat` `p` together with a function `f` returning the value to be guarded by the pattern, and the bit string `s` to match against.
-`p` must be of the same bit witdth as `s`. If `f` recieves arguments, they should be declared in `p` using an appropriate [combinator](#Pattern-combinators). The argument sizes and positions will define the bits in `s` that will be passed to `f`. For example, the function
+`p` must be of the same bit witdth as `s`. If `f` recieves arguments, they should be declared in `p` using an appropriate [combinator](#pattern-combinators). The argument sizes and positions will define the bits in `s` that will be passed to `f`. For example, the function
 ```bsv
 function Action add(Bit#(5) rs2, Bit#(5) rs1, Bit#(5) rd) = action
   $display("time %0t - add %0d, %0d, %0d", $time, rd, rs1, rs2);
@@ -84,7 +84,7 @@ Additionally, `gAct` will have its `val` field set to the returned value of `add
 (That is, `gAct.val` is the same as `add(instr[24:20], instr[19:15], instr[11:7])` or `add(5'b00001, 5'b00010, 5'b00011)`)
 
 ## Extra utility functions
-* On top of the `gv` combinator described in the [Pattern combinators](#Pattern-combinators) section, a `guarded` function is provided to predicate a whole pattern:
+* On top of the `gv` combinator described in the [Pattern combinators](#pattern-combinators) section, a `guarded` function is provided to predicate a whole pattern:
 ```bsv
 function BitPat#(n, t0, t1) guarded(BitPat#(n, t0, t1) p, function Bool g(Bit#(n) x))
 ```
