@@ -33,51 +33,81 @@
 import List :: *;
 import Printf :: *;
 
+// list of exported features
+export BitPatCore;
+export BitPat;
+export Guarded;
+export GCol;
+export RulesGenerator(..);
+export genRules;
+export pick;
+export MkSwitch;
+export switch;
+export when;
+export Pat(..);
+export guarded;
+export n;
+export v;
+export sv;
+export gv;
+
+// guarded type
+typedef struct {
+  Bool guard;
+  a val;
+} Guarded#(type a) deriving (Bits, FShow);
+
+// collection of user type + guard
+typedef Guarded#(List#(ut)) GCol#(type ut);
+
 // Continuation combinators
-function Tuple2#(Bool, t0) one(t1 v, function t0 k(t1 v)) =
-  tuple2(True, k(v));
-function Tuple2#(Bool, t2) app(function Tuple2#(Bool, t1) m(t0 v),
-                               function Tuple2#(Bool, t2) n(t1 v), t0 k);
-  match {.b1, .k1} = m(k);
-  match {.b2, .k2} = n(k1);
-  return tuple2(b1 && b2, k2);
+function Tuple2#(GCol#(ut), t0) one(t1 v, function t0 k(t1 v)) =
+  tuple2(GCol{guard: True, val: Nil}, k(v));
+function Tuple2#(GCol#(ut), t2) app(function Tuple2#(GCol#(ut), t1) m(t0 v),
+                               function Tuple2#(GCol#(ut), t2) n(t1 v), t0 k);
+  match {.g1, .k1} = m(k);
+  match {.g2, .k2} = n(k1);
+  return tuple2(GCol{guard: g1.guard && g2.guard, val: append(g1.val, g2.val)}, k2);
 endfunction
 
 // Bit patterns (type synonym)
-typedef function Tuple2#(Bool, t1) f(Bit#(n) x, t0 k)
-  BitPat#(numeric type n, type t0, type t1);
+typedef function Tuple2#(GCol#(ut), t1) f(Bit#(n) x, t0 k)
+  BitPatCore#(type ut, numeric type n, type t0, type t1);
+
+typedef BitPatCore#(Bit#(0), n, t0, t1) BitPat#(numeric type n, type t0, type t1);
 
 // Bit pattern combinators
-// BitPat specific numeric value
-function Tuple2#(Bool, t1) numBitPat(Bit#(n) a, Bit#(n) b, t1 k) =
-  tuple2(a == b, k);
-// BitPat variable
-function Tuple2#(Bool, t0) varBitPat(Bit#(n) x, function t0 f(Bit#(n) x)) =
+// BitPatCore specific numeric value
+function Tuple2#(GCol#(ut), t1) numBitPat(Bit#(n) a, Bit#(n) b, t1 k) =
+  tuple2(GCol{guard: a == b, val: Nil}, k);
+// BitPatCore variable
+function Tuple2#(GCol#(ut), t0) varBitPat(Bit#(n) x, function t0 f(Bit#(n) x)) =
   one(x, f);
-// BitPat variable of an explicit bit size
-function Tuple2#(Bool, t0) sizedVarBitPat(Integer sz, Bit#(n) x,
+// BitPatCore variable of an explicit bit size
+function Tuple2#(GCol#(ut), t0) sizedVarBitPat(Integer sz, Bit#(n) x,
                                           function t0 f(Bit#(n) x)) =
   (sz == valueOf(n)) ? one(x, f) : error(sprintf("BitPat::sizedVarBitPat - Expecting Bit#(%0d) variable, seen Bit#(%0d) variable", sz, valueOf(n)));
-// BitPat variable guarded with a predicate
-function Tuple2#(Bool, t0) guardedVarBitPat(function Bool guard(Bit#(n) x),
+// BitPatCore variable guarded with a predicate
+function Tuple2#(GCol#(ut), t0) guardedVarBitPat(function Bool pred(Bit#(n) x),
                                             Bit#(n) x,
                                             function t0 f(Bit#(n) x)) =
-  tuple2(guard(x), f(x));
-// BitPat concatenation
-function Tuple2#(Bool, t2) catBitPat(BitPat#(n0, t0, t1) f,
-                                     BitPat#(n1, t1, t2) g, Bit#(n2) n, t0 k)
+  tuple2(GCol{guard: pred(x), val: Nil}, f(x));
+// BitPatCore concatenation
+function Tuple2#(GCol#(ut), t2) catBitPat(BitPatCore#(ut, n0, t0, t1) f,
+                                     BitPatCore#(ut, n1, t1, t2) g, Bit#(n2) n, t0 k)
                                      provisos (Add#(n0, n1, n2)) =
   app(f(truncateLSB(n)), g(truncate(n)), k);
 
 // Bit pattern combinator wrappers
-function BitPat#(n, t0, t0) n(Bit#(n) x) = numBitPat(x);
-function BitPat#(n, function t0 f(Bit#(n) x), t0) v() = varBitPat;
-function BitPat#(n, function t0 f(Bit#(n) x), t0) sv(Integer x) =
+function BitPatCore#(ut, n, t0, t0) n(Bit#(n) x) = numBitPat(x);
+function BitPatCore#(ut, n, function t0 f(Bit#(n) x), t0) v() = varBitPat;
+function BitPatCore#(ut, n, function t0 f(Bit#(n) x), t0) sv(Integer x) =
   sizedVarBitPat(x);
-function BitPat#(n, function t0 f(Bit#(n) x), t0) gv(
+function BitPatCore#(ut, n, function t0 f(Bit#(n) x), t0) gv(
   function Bool g(Bit#(n) x)) = guardedVarBitPat(g);
-function BitPat#(n2, t0, t2) cat(BitPat#(n0, t0, t1) p,
-                                 BitPat#(n1, t1, t2) q)
+function BitPatCore#(ut, n2, t0, t2) cat(
+                                 BitPatCore#(ut, n0, t0, t1) p,
+                                 BitPatCore#(ut, n1, t1, t2) q)
            provisos(Add#(n0, n1, n2)) = catBitPat(p, q);
 
 // Type class for constructing patterns
@@ -88,21 +118,22 @@ typeclass Pat#(type a, type b) dependencies (a determines b);
   function a pat(b x);
 endtypeclass
 
-instance Pat#(BitPat#(n, t0, t1), BitPat#(n, t0, t1));
+instance Pat#(BitPatCore#(ut, n, t0, t1), BitPatCore#(ut, n, t0, t1));
   function pat(p) = p;
 endinstance
 
-instance Pat#(function a f(BitPat#(n1, t1, t2) y), BitPat#(n0, t0, t1))
-                  provisos(Pat#(a, BitPat#(TAdd#(n0, n1), t0, t2)));
+instance Pat#(function a f(BitPatCore#(ut, n1, t1, t2) y), BitPatCore#(ut, n0, t0, t1))
+                  provisos(Pat#(a, BitPatCore#(ut, TAdd#(n0, n1), t0, t2)));
   function pat(x, y) = pat(cat(x, y));
 endinstance
 
 // Function to guard a pattern based on a predicate on the case subject
-function BitPat#(n, t0, t1) guarded(BitPat#(n, t0, t1) p,
+function BitPatCore#(ut, n, t0, t1) guarded(BitPatCore#(ut, n, t0, t1) p,
                                     function Bool g(Bit#(n) x));
-  function Tuple2#(Bool, t1) wrapGuard (Bit#(n) s, t0 f);
+  function Tuple2#(GCol#(ut), t1) wrapGuard (Bit#(n) s, t0 f);
     match {.b,.r} = p(s, f);
-    return tuple2(g(s) && b, r);
+    b.guard = b.guard && g(s);
+    return tuple2(b, r);
   endfunction
   return wrapGuard;
 endfunction
@@ -110,16 +141,11 @@ endfunction
 /////////////////////
 // Utility classes //
 ////////////////////////////////////////////////////////////////////////////////
-// guarded type
-typedef struct {
-  Bool guard;
-  a val;
-} Guarded#(type a) deriving (Bits, FShow);
 // when function, applying a pattern to a subject and guarding the return value
 // of the passed continuation
-function Guarded#(a) when(BitPat#(n, t, a) p, t f, Bit#(n) subject);
-  Tuple2#(Bool, a) res = p(subject, f);
-  return Guarded { guard: tpl_1(res), val: tpl_2(res) };
+function Guarded#(a) when(BitPatCore#(ut, n, t, a) p, t f, Bit#(n) subject);
+  Tuple2#(GCol#(ut), a) res = p(subject, f);
+  return Guarded { guard: tpl_1(res).guard, val: tpl_2(res) };
 endfunction
 // switch var args function typeclass
 typeclass MkSwitch#(type a, type n, type b) dependencies ((a, n) determines b);
