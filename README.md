@@ -198,6 +198,12 @@ their respective patterns. Note that it is necessary for the return
 type of `add` and `addi` to be consistent (i.e. for `switch` to work,
 `add` and `addi` must return the same type).
 
+* The `pick` function is provided to return the first `a` with a guard of `True` out of a `List#(Guarded#(a))`:
+
+```bsv
+function a pick(List#(Guarded#(a)) xs)
+```
+
 * The `RulesGenerator` typeclass defines the `rulesGenerator` module
 as follows:
 
