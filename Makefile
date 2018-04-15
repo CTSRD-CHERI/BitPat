@@ -39,3 +39,4 @@ example%: Example%.bsv BitPat.bsv
 .PHONY: clean
 clean:
 	rm -fr *example*
+	ls BitPat.* | grep -v BitPat.bsv | xargs rm -f
