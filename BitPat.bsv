@@ -123,17 +123,17 @@ function Guarded#(a) when(BitPat#(n, t, a) p, t f, Bit#(n) subject);
 endfunction
 // switch var args function typeclass
 typeclass MkSwitch#(type a, type n, type b) dependencies ((a, n) determines b);
-  function a mkSwitch(Bit#(n) val, List#(b) act);
+  function a mkSwitch(Bit#(n) subj, List#(b) rhhs);
 endtypeclass
 instance MkSwitch#(List#(b), n, b);
-  function mkSwitch(val, acts) = List::reverse(acts);
+  function mkSwitch(subj, rhss) = List::reverse(rhss);
 endinstance
-instance MkSwitch#(function a f(function b f(Bit#(n) val)), n, b)
+instance MkSwitch#(function a f(function b f(Bit#(n) subj)), n, b)
          provisos (MkSwitch#(a, n, b));
-  function mkSwitch(val, acts, f) = mkSwitch(val, Cons(f(val), acts));
+  function mkSwitch(subj, rhss, f) = mkSwitch(subj, Cons(f(subj), rhss));
 endinstance
-function a switch(Bit#(n) val) provisos (MkSwitch#(a, n, b));
-  return mkSwitch(val, Nil);
+function a switch(Bit#(n) subj) provisos (MkSwitch#(a, n, b));
+  return mkSwitch(subj, Nil);
 endfunction
 // RulesGenerator typeclass
 typeclass RulesGenerator#(type a);
