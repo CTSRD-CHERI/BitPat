@@ -7,6 +7,8 @@ BitPat is a bit-string pattern matching library for Bluespec, inspired by [Morte
 To get a taste of BitPat, here's a simple instruction decoder:
 
 ```bsv
+import BitPat :: *;
+
 function Action add(Bit#(5) rs2, Bit#(5) rs1, Bit#(5) rd) = action
   $display("time %0t - add %0d, %0d, %0d", $time, rd, rs1, rs2);
 endaction;
@@ -44,11 +46,16 @@ right-hand-side.
 
 ## Getting started
 
-The library sources are contained in the `BitPat.bsv` file. Two
-examples, `Example1.bsv` and `Example2.bsv`, are also provided and can
-be built on a system with a working installation of Bluespec by typing
-`make`. They can each be run with `./example1` and `./example2`
-respectively.
+The library sources are contained in [BitPat.bsv](BitPat.bsv). Examples
+are also provided as `ExampleX.bsv` and can be built on a system with a
+working installation of Bluespec by typing `make`. They can each be run
+with `./exampleX`.
+* [Example0.bsv](Example0.bsv) is the short example presented in this README
+* [Example1.bsv](Example1.bsv) makes use of advances features and uses the
+`Action` RulesGenerator instance
+* [Example2.bsv](Example2.bsv) makes use of advances features and uses the
+`List#(Action)` RulesGenerator instance
+* [Example3.bsv](Example3.bsv) uses BitPat in a purely combinational context
 
 ## Library overview
 
