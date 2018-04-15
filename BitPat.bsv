@@ -135,6 +135,12 @@ endinstance
 function a switch(Bit#(n) subj) provisos (MkSwitch#(a, n, b));
   return mkSwitch(subj, Nil);
 endfunction
+// pick function to wrap switch in combinatorial contexts
+function a pick(List#(Guarded#(a)) xs);
+  function Bool getGuard(Guarded#(a) x) = x.guard;
+  function a getVal(Guarded#(a) x) = x.val;
+  return fromMaybe(?, fmap(getVal, find(getGuard, xs)));
+endfunction
 // RulesGenerator typeclass
 typeclass RulesGenerator#(type a);
   module rulesGenerator#(List#(Guarded#(a)) xs) (Tuple2#(Rules, PulseWire));

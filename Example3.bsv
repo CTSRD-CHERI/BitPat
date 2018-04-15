@@ -31,7 +31,6 @@ import BitPat :: *;
 import List :: *;
 
 function Bit#(5) bitAnd(Bit#(5) op1, Bit#(5) op2) = op1 & op2;
-
 function Bit#(5) bitOr(Bit#(5) op1, Bit#(5) op2) = op1 | op2;
 
 module top ();
@@ -45,15 +44,13 @@ module top ();
   rule instAnd (cycle == 0); instr <= 11'b00101010101; endrule
   rule instOr  (cycle == 1); instr <= 11'b10101010101; endrule
 
-  List#(Guarded#(Bit#(5))) ops = switch(instr,
+  Bit#(5) res = pick(switch(instr,
     when(pat(n(1'b0), v, v), bitAnd),
     when(pat(n(1'b1), v, v), bitOr)
-  );
+  ));
 
   rule doDisplay (cycle > 0);
-    $display("time %0t - instr = 0b%011b", $time, instr);
-    for (Integer i = 0; i < length(ops); i = i + 1)
-      $display("time %0t - ops[%0d] = ", $time, i, fshow(ops[i]));
+    $display("time %0t - instr = 0b%011b, res = 0b%05b", $time, instr, res);
   endrule
 
   rule endSim (cycle > 1);
