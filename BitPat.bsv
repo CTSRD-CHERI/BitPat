@@ -114,7 +114,7 @@ endfunction
 typedef struct {
   Bool guard;
   a val;
-} Guarded#(type a);
+} Guarded#(type a) deriving (Bits, FShow);
 // when function, applying a pattern to a subject and guarding the return value
 // of the passed continuation
 function Guarded#(a) when(BitPat#(n, t, a) p, t f, Bit#(n) subject);
