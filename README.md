@@ -29,9 +29,9 @@ module top ();
 endmodule
 ```
 
-The *case subject* in the first argument of `switch` is matched
-against the *pattern* in the first argument of `when` and guards the
-*right-hand-side* function provided in the second argument of `when`.
+The **case subject** in the first argument of `switch` is matched
+against the **pattern** in the first argument of `when` and guards the
+**right-hand-side** function provided in the second argument of `when`.
 The `genRules` function  then derives the actual Bluespec rules to
 execute the machine described.
 
@@ -98,7 +98,7 @@ recieves arguments, they should be declared in the pattern `p` using
 an appropriate [combinator](#pattern-combinators). The sizes and
 positions of the arguments of the right-hand-side `f` will define the
 bit-fields in the case subject `s` that will be passed to `f`. For
-example, if the *right hand side* function
+example, if the right-hand-side function
 
 ```bsv
 function Action add(Bit#(5) rs2, Bit#(5) rs1, Bit#(5) rd) = action
@@ -153,15 +153,15 @@ instr[11:7])` or `add(5'b00001, 5'b00010, 5'b00011)`.
 
 ## Extra utility functions
 
-* The `guarded` function is provided to predicate a whole *pattern*:
+* The `guarded` function is provided to predicate a whole pattern:
 
 ```bsv
 function BitPat#(n, t0, t1) guarded(BitPat#(n, t0, t1) p, function Bool g(Bit#(n) x))
 ```
 
-The function simply wraps a classic *pattern* (obtained with standard
-`pat` call) and takes a predicate that will be applied to the *case
-subject* in its entirety. The final guard is the logical **and** of
+The function simply wraps a classic pattern (obtained with standard
+`pat` call) and takes a predicate that will be applied to the case
+subject in its entirety. The final guard is the logical *and* of
 this predicate and the standard guard. Note: the `gv` combinator
 described in the [Pattern combinators](#pattern-combinators) section
 provides a similar but more local functionality.
@@ -228,8 +228,8 @@ endmodule
 
 ## Pattern combinators
 
-* The `n` number combinator expects a `Bit#(n)` as argument. It
-advances the *case subject*'s bit string and returns `True` on
+* The `n` numeric literal combinator expects a `Bit#(n)` as argument. It
+advances the case subject's bit string and returns `True` on
 successfull match, or simply returns `False` on failure.
 
 ```bsv
