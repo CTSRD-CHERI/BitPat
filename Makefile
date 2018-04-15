@@ -31,9 +31,9 @@ BSC = bsc
 
 all: $(patsubst Example%.bsv, example%, $(wildcard Example*.bsv))
 
-example%: Example%.bsv
+example%: Example%.bsv BitPat.bsv
 	mkdir -p bdir-$@ simdir-$@
-	$(BSC) -bdir bdir-$@ -simdir simdir-$@ -u -sim -g top $^
+	$(BSC) -bdir bdir-$@ -simdir simdir-$@ -u -sim -g top $<
 	$(BSC) -bdir bdir-$@ -simdir simdir-$@ -sim -e top -o $@
 
 .PHONY: clean
