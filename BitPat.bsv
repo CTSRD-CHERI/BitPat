@@ -36,7 +36,7 @@ import Printf :: *;
 // list of exported features
 export BitPatCore;
 export BitPat;
-export Guarded;
+export Guarded(..);
 export GCol;
 export RulesGenerator(..);
 export genRules;
