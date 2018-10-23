@@ -41,11 +41,17 @@ module top ();
   // Example instruction
   Bit#(32) instr = 32'b0000000_00001_00010_000_00011_0110011;
 
-  // Decoder
-  genRules(
+  Pat#(Bit#(32), function Action add(Bit#(5) rs2, Bit#(5) rs1, Bit#(5) rd), Action) x1 = pat(n(7'b0000000), v, v, n(3'b000), v, n(7'b0110011));
+  List#(Guarded#(Action)) xs =
     switch(instr,
+      when(cat(n(7'b0000000), cat(v, cat(v, cat(n(3'b000), cat(v, n(7'b0110011)))))), add),
+      when(cat(               v, cat(v, cat(n(3'b000), cat(v, n(7'b0010011))))), addi));
+
+  // Decoder
+  genRules(xs);
+  /*  switch(instr,
       when(pat(n(7'b0000000), v, v, n(3'b000), v, n(7'b0110011)), add),
       when(pat(               v, v, n(3'b000), v, n(7'b0010011)), addi)
     )
-  );
+  );*/
 endmodule

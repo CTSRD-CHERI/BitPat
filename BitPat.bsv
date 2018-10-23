@@ -34,8 +34,8 @@ import List :: *;
 import Printf :: *;
 
 // list of exported features
-export BitPatCore;
-export BitPat;
+export PatCore;
+export Pat;
 export Guarded(..);
 export GCol;
 export RulesGenerator(..);
@@ -44,12 +44,16 @@ export pick;
 export MkSwitch;
 export switch;
 export when;
-export Pat(..);
+export litPat;
+export varPat;
+export BitPatCore;
+export BitPat(..);
 export guarded;
 export n;
 export v;
 export sv;
 export gv;
+export cat;
 
 // guarded type
 typedef struct {
@@ -70,67 +74,69 @@ function Tuple2#(GCol#(ut), t2) app(function Tuple2#(GCol#(ut), t1) m(t0 v),
   return tuple2(GCol{guard: g1.guard && g2.guard, val: append(g1.val, g2.val)}, k2);
 endfunction
 
-// Bit patterns (type synonym)
-typedef function Tuple2#(GCol#(ut), t1) f(Bit#(n) x, t0 k)
-  BitPatCore#(type ut, numeric type n, type t0, type t1);
+// Type of pattern combinators
+typedef function Tuple2#(GCol#(ut), t1) f(st s, t0 k)
+  PatCore#(type ut, type st, type t0, type t1);
 
-typedef BitPatCore#(Bit#(0), n, t0, t1) BitPat#(numeric type n, type t0, type t1);
+typedef PatCore#(Bit#(0), st, t0, t1) Pat#(type st, type t0, type t1);
 
-// Bit pattern combinators
-// BitPatCore specific numeric value
-function Tuple2#(GCol#(ut), t1) numBitPat(Bit#(n) a, Bit#(n) b, t1 k) =
+typedef PatCore#(ut, Bit#(n), t0, t1) BitPatCore#(type ut, numeric type n, type t0, type t1);
+
+// Pattern combinators
+// Literal value
+function Tuple2#(GCol#(ut), t1) litPat(st a, st b, t1 k) provisos (Eq#(st)) =
   tuple2(GCol{guard: a == b, val: Nil}, k);
-// BitPatCore variable
-function Tuple2#(GCol#(ut), t0) varBitPat(Bit#(n) x, function t0 f(Bit#(n) x)) =
+// Variable
+function Tuple2#(GCol#(ut), t0) varPat(st x, function t0 f(st x)) =
   one(x, f);
-// BitPatCore variable of an explicit bit size
+// Variable of an explicit bit size
 function Tuple2#(GCol#(ut), t0) sizedVarBitPat(Integer sz, Bit#(n) x,
                                           function t0 f(Bit#(n) x)) =
   (sz == valueOf(n)) ? one(x, f) : error(sprintf("BitPat::sizedVarBitPat - Expecting Bit#(%0d) variable, seen Bit#(%0d) variable", sz, valueOf(n)));
-// BitPatCore variable guarded with a predicate
-function Tuple2#(GCol#(ut), t0) guardedVarBitPat(function Bool pred(Bit#(n) x),
-                                            Bit#(n) x,
-                                            function t0 f(Bit#(n) x)) =
+// Variable guarded with a predicate
+function Tuple2#(GCol#(ut), t0) guardedVarPat(function Bool pred(st x),
+                                            st x,
+                                            function t0 f(st x)) =
   tuple2(GCol{guard: pred(x), val: Nil}, f(x));
-// BitPatCore concatenation
-function Tuple2#(GCol#(ut), t2) catBitPat(BitPatCore#(ut, n0, t0, t1) f,
-                                     BitPatCore#(ut, n1, t1, t2) g, Bit#(n2) n, t0 k)
+// Bitvector concatenation
+function Tuple2#(GCol#(ut), t2) catBitPat(PatCore#(ut, Bit#(n0), t0, t1) f,
+                                     PatCore#(ut, Bit#(n1), t1, t2) g, Bit#(n2) n, t0 k)
                                      provisos (Add#(n0, n1, n2)) =
   app(f(truncateLSB(n)), g(truncate(n)), k);
 
 // Bit pattern combinator wrappers
-function BitPatCore#(ut, n, t0, t0) n(Bit#(n) x) = numBitPat(x);
-function BitPatCore#(ut, n, function t0 f(Bit#(n) x), t0) v() = varBitPat;
+function BitPatCore#(ut, n, t0, t0) n(Bit#(n) x) = litPat(x);
+function BitPatCore#(ut, n, function t0 f(Bit#(n) x), t0) v() = varPat;
 function BitPatCore#(ut, n, function t0 f(Bit#(n) x), t0) sv(Integer x) =
   sizedVarBitPat(x);
-function BitPatCore#(ut, n, function t0 f(Bit#(n) x), t0) gv(
-  function Bool g(Bit#(n) x)) = guardedVarBitPat(g);
+function PatCore#(ut, st, function t0 f(st x), t0) gv(
+  function Bool g(st x)) = guardedVarPat(g);
 function BitPatCore#(ut, n2, t0, t2) cat(
                                  BitPatCore#(ut, n0, t0, t1) p,
                                  BitPatCore#(ut, n1, t1, t2) q)
            provisos(Add#(n0, n1, n2)) = catBitPat(p, q);
 
-// Type class for constructing patterns
+// Type class for constructing bit patterns
 //
 //   pat(p0, p1, p2, ...) = cat(p0, cat(p1, cat(p2, ...
 //
-typeclass Pat#(type a, type b) dependencies (a determines b);
+typeclass BitPat#(type a, type b) dependencies (a determines b);
   function a pat(b x);
 endtypeclass
 
-instance Pat#(BitPatCore#(ut, n, t0, t1), BitPatCore#(ut, n, t0, t1));
+instance BitPat#(BitPatCore#(ut, n, t0, t1), BitPatCore#(ut, n, t0, t1));
   function pat(p) = p;
 endinstance
 
-instance Pat#(function a f(BitPatCore#(ut, n1, t1, t2) y), BitPatCore#(ut, n0, t0, t1))
-                  provisos(Pat#(a, BitPatCore#(ut, TAdd#(n0, n1), t0, t2)));
+instance BitPat#(function a f(BitPatCore#(ut, n1, t1, t2) y), BitPatCore#(ut, n0, t0, t1))
+                  provisos(BitPat#(a, BitPatCore#(ut, TAdd#(n0, n1), t0, t2)));
   function pat(x, y) = pat(cat(x, y));
 endinstance
 
 // Function to guard a pattern based on a predicate on the case subject
-function BitPatCore#(ut, n, t0, t1) guarded(BitPatCore#(ut, n, t0, t1) p,
-                                    function Bool g(Bit#(n) x));
-  function Tuple2#(GCol#(ut), t1) wrapGuard (Bit#(n) s, t0 f);
+function PatCore#(ut, st, t0, t1) guarded(PatCore#(ut, st, t0, t1) p,
+                                    function Bool g(st x));
+  function Tuple2#(GCol#(ut), t1) wrapGuard (st s, t0 f);
     match {.b,.r} = p(s, f);
     b.guard = b.guard && g(s);
     return tuple2(b, r);
@@ -143,22 +149,22 @@ endfunction
 ////////////////////////////////////////////////////////////////////////////////
 // when function, applying a pattern to a subject and guarding the return value
 // of the passed continuation
-function Guarded#(a) when(BitPatCore#(ut, n, t, a) p, t f, Bit#(n) subject);
+function Guarded#(a) when(PatCore#(ut, st, t, a) p, t f, st subject);
   Tuple2#(GCol#(ut), a) res = p(subject, f);
   return Guarded { guard: tpl_1(res).guard, val: tpl_2(res) };
 endfunction
 // switch var args function typeclass
-typeclass MkSwitch#(type a, type n, type b) dependencies ((a, n) determines b);
-  function a mkSwitch(Bit#(n) subj, List#(b) rhhs);
+typeclass MkSwitch#(type a, type st, type b) dependencies ((a, st) determines b);
+  function a mkSwitch(st subj, List#(b) rhhs);
 endtypeclass
-instance MkSwitch#(List#(b), n, b);
+instance MkSwitch#(List#(b), st, b);
   function mkSwitch(subj, rhss) = List::reverse(rhss);
 endinstance
-instance MkSwitch#(function a f(function b f(Bit#(n) subj)), n, b)
-         provisos (MkSwitch#(a, n, b));
+instance MkSwitch#(function a f(function b f(st subj)), st, b)
+         provisos (MkSwitch#(a, st, b));
   function mkSwitch(subj, rhss, f) = mkSwitch(subj, Cons(f(subj), rhss));
 endinstance
-function a switch(Bit#(n) subj) provisos (MkSwitch#(a, n, b));
+function a switch(st subj) provisos (MkSwitch#(a, st, b));
   return mkSwitch(subj, Nil);
 endfunction
 // pick function to wrap switch in combinatorial contexts
