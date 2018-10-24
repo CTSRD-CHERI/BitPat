@@ -41,11 +41,9 @@ module top ();
   // Example instruction
   Bit#(32) instr = 32'b0000000_00001_00010_000_00011_0110011;
 
-  // Decoder
-  genRules(
-    switch(instr,
-      when(pat(n(7'b0000000), v, v, n(3'b000), v, n(7'b0110011)), add),
-      when(pat(               v, v, n(3'b000), v, n(7'b0010011)), addi)
-    )
+  // Add rule
+  genRule(
+    branch(pat(n(7'b0000000), v, v, n(3'b000), v, n(7'b0110011)), add, instr)
   );
+
 endmodule

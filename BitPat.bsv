@@ -40,10 +40,12 @@ export Guarded(..);
 export GCol;
 export RulesGenerator(..);
 export genRules;
+export genRule;
 export pick;
 export MkSwitch;
 export switch;
 export when;
+export branch;
 export litPat;
 export varPat;
 export BitPatCore;
@@ -149,7 +151,12 @@ endfunction
 ////////////////////////////////////////////////////////////////////////////////
 // when function, applying a pattern to a subject and guarding the return value
 // of the passed continuation
-function Guarded#(a) when(PatCore#(ut, st, t, a) p, t f, st subject);
+function Guarded#(a) when(PatCore#(ut, Bit#(n), t, a) p, t f, Bit#(n) subject);
+  Tuple2#(GCol#(ut), a) res = p(subject, f);
+  return Guarded { guard: tpl_1(res).guard, val: tpl_2(res) };
+endfunction
+// generalised version of when, where the subject may be an type in Eq
+function Guarded#(a) branch(PatCore#(ut, st, t, a) p, t f, st subject);
   Tuple2#(GCol#(ut), a) res = p(subject, f);
   return Guarded { guard: tpl_1(res).guard, val: tpl_2(res) };
 endfunction
@@ -188,6 +195,11 @@ module genRules#(List#(Guarded#(a)) xs) (Empty) provisos (RulesGenerator#(a));
   endrule
   */
 endmodule
+// generate a single rule
+module genRule#(Guarded#(a) x) (Empty) provisos (RulesGenerator#(a));
+  genRules(Cons(x, Nil));
+endmodule
+
 
 ////////////
 // Action //
