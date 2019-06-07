@@ -45,8 +45,8 @@ module top ();
   rule instOr  (cycle == 1); instr <= 11'b10101010101; endrule
 
   Bit#(5) res = pick(switch(instr,
-    when(pat(n(1'b0), v, v), bitAnd),
-    when(pat(n(1'b1), v, v), bitOr)
+    whenPat(pat(n(1'b0), v, v), bitAnd),
+    whenPat(pat(n(1'b1), v, v), bitOr)
   ));
 
   rule doDisplay (cycle > 0);

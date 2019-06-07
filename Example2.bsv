@@ -67,19 +67,19 @@ module top ();
   // the user
   match {.allRules, .done} <- rulesGenerator(
     switch(instr,
-      when(pat(n(7'b0), sv(5), sv(5), n(3'b0), sv(5), n(7'b0110011)), add),
+      whenPat(pat(n(7'b0), sv(5), sv(5), n(3'b0), sv(5), n(7'b0110011)), add),
       /*
       XXX example of compile time sv error:
       when(pat(n(7'b0), sv(5), sv(8), n(3'b0), sv(5), n(7'b0110011)), add),
       */
-      when(pat(v,  gv(eq(5)), n(3'b0), v, n(7'b0010011)), addi_rd5),
+      whenPat(pat(v,  gv(eq(5)), n(3'b0), v, n(7'b0010011)), addi_rd5),
       /*
       when(
         guarded(pat(v,  v, n(3'b0), v, n(7'b0010011)), guardEQ5),
         addi_rd5),
       */
       //when(pat(v, gv(neq(5)), n(3'b0), v, n(7'b0010011)), addi_rdnot5)
-      when(
+      whenPat(
         guarded(pat(v, v, n(3'b0), v, n(7'b0010011)), guardNEQ5),
         addi_rdnot5)
     )

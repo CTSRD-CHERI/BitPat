@@ -44,8 +44,8 @@ module top ();
   // Decoder
   genRules(
     switch(instr,
-      when(pat(n(7'b0000000), v, v, n(3'b000), v, n(7'b0110011)), add),
-      when(pat(               v, v, n(3'b000), v, n(7'b0010011)), addi)
+      whenPat(pat(n(7'b0000000), v, v, n(3'b000), v, n(7'b0110011)), add),
+      whenPat(pat(               v, v, n(3'b000), v, n(7'b0010011)), addi)
     )
   );
 endmodule

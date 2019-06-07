@@ -1,0 +1,173 @@
+{-
+ - Copyright (c) 2018 Matthew Naylor
+ - Copyright (c) 2018 Alexandre Joannou
+ - All rights reserved.
+ -
+ - This software was developed by SRI International and the University of
+ - Cambridge Computer Laboratory (Department of Computer Science and
+ - Technology) under DARPA contract HR0011-18-C-0016 ("ECATS"), as part of the
+ - DARPA SSITH research programme.
+ -
+ - @BERI_LICENSE_HEADER_START@
+ -
+ - Licensed to BERI Open Systems C.I.C. (BERI) under one or more contributor
+ - license agreements.  See the NOTICE file distributed with this work for
+ - additional information regarding copyright ownership.  BERI licenses this
+ - file to you under the BERI Hardware-Software License, Version 1.0 (the
+ - "License"); you may not use this file except in compliance with the
+ - License.  You may obtain a copy of the License at:
+ -
+ -   http://www.beri-open-systems.org/legal/license-1-0.txt
+ -
+ - Unless required by applicable law or agreed to in writing, Work distributed
+ - under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
+ - CONDITIONS OF ANY KIND, either express or implied.  See the License for the
+ - specific language governing permissions and limitations under the License.
+ -
+ - @BERI_LICENSE_HEADER_END@
+ -}
+
+package BitPat where
+
+import List
+import Printf
+
+-- Bit-string pattern matching for Bluespec
+-- Inspired by Morten Rhiger's "Type-Safe Pattern Combinators"
+
+-- guarded type
+struct Guarded a = { guard :: Bool; val :: a } deriving (Bits, FShow)
+
+-- guarded collection of user types
+type GCol a = Guarded (List a)
+
+-- continuation combinators
+one :: t1 -> (t1 -> t0) -> (GCol a, t0)
+one x k = (GCol { guard = True; val = Nil }, k x)
+
+app :: (t0 -> (GCol a, t1)) -> (t1 -> (GCol a, t2)) -> t0 -> (GCol a, t2)
+app f0 f1 k = let (g1, k1) = f0 k
+                  (g2, k2) = f1 k1
+              in (GCol{guard = g1.guard && g2.guard; val = append g1.val g2.val}
+                 ,k2)
+
+-- Bit patterns (type synonym)
+type BitPatCore ut n t0 t1 = Bit n -> t0 -> (GCol ut, t1)
+type BitPat n t0 t1 = BitPatCore (Bit 0) n t0 t1
+
+-- Bit pattern combinators
+-- BitPatCore specific numeric value
+numBitPat :: Bit n -> Bit n -> t1 -> (GCol ut, t1)
+numBitPat a b k = (GCol {guard = a == b; val = Nil}, k)
+-- BitPatCore variable
+varBitPat :: Bit n -> (Bit n -> t0) -> (GCol ut, t0)
+varBitPat x f = one x f
+-- BitPatCore variable of an explicit bit size
+sizedVarBitPat :: Integer -> Bit n -> (Bit n -> t0) -> (GCol ut, t0)
+sizedVarBitPat sz x f = if (sz == valueOf n) then one x f
+                        else error $ sprintf "BitPat::sizedVarBitPat - Expecting Bit#(%0d) variable, seen Bit#(%0d) variable" sz (valueOf n)
+-- BitPatCore variable guarded with a predicate
+guardedVarBitPat :: (Bit n -> Bool) -> Bit n -> (Bit n -> t0) -> (GCol ut, t0)
+guardedVarBitPat pred x f = (GCol {guard = pred x; val = Nil}, f x)
+-- BitPatCore concatenation
+catBitPat :: (Add n0 n1 n2) =>
+             BitPatCore ut n0 t0 t1 -> BitPatCore ut n1 t1 t2 -> Bit n2 -> t0 -> (GCol ut, t2)
+catBitPat f g x k = app (f $ truncateLSB x) (g $ truncate x) k
+
+-- Bit pattern combinator wrappers
+n :: Bit x -> BitPatCore ut x t0 t0
+n = numBitPat
+v :: BitPatCore ut x (Bit x -> t0) t0
+v = varBitPat
+sv :: Integer -> BitPatCore ut x (Bit x -> t0) t0
+sv = sizedVarBitPat
+gv :: (Bit x -> Bool) -> BitPatCore ut x (Bit x -> t0) t0
+gv = guardedVarBitPat
+cat :: (Add n0 n1 n2) =>
+       BitPatCore ut n0 t0 t1 -> BitPatCore ut n1 t1 t2 -> BitPatCore ut n2 t0 t2
+cat = catBitPat
+
+-- Type class for constructing patterns
+--
+--   pat(p0, p1, p2, ...) = cat(p0, cat(p1, cat(p2, ...
+--
+class Pat a b | a -> b where
+  pat :: b -> a
+
+instance Pat (BitPatCore ut n t0 t1) (BitPatCore ut n t0 t1) where
+  pat = id
+
+instance (Pat a (BitPatCore ut (TAdd n0 n1) t0 t2)) =>
+         Pat (BitPatCore ut n1 t1 t2 -> a) (BitPatCore ut n0 t0 t1) where
+  pat x y = pat $ cat x y
+
+-- Function to guard a pattern based on a predicate on the case subject
+guarded :: BitPatCore ut n0 t0 t1 -> (Bit n0 -> Bool) -> BitPatCore ut n0 t0 t1
+guarded p g = \s f -> let (b, r) = p s f
+                      in (b {guard = b.guard && (g s)}, r)
+
+-- Utility classes
+--------------------------------------------------------------------------------
+-- when function, applying a pattern to a subject and guarding the return value
+-- of the passed continuation
+whenPat :: BitPatCore ut x t a -> t -> Bit x -> Guarded a
+whenPat p f subj = let (g, x) = p subj f
+                   in Guarded {guard = g.guard; val = x}
+-- switch var args function typeclass
+class MkSwitch a n b | a n -> b where
+  mkSwitch :: Bit n -> List b -> a
+instance MkSwitch (List b) n b where
+  mkSwitch _ = reverse
+instance (MkSwitch a n b) => MkSwitch ((Bit n -> b) -> a) n b where
+  mkSwitch sbj rhss f = mkSwitch sbj ((f sbj) :> rhss)
+switch :: (MkSwitch a n b) => Bit n -> a
+switch sbj = mkSwitch sbj Nil
+-- pick function to wrap switch in combinatorial contexts
+pick :: List (Guarded a) -> a
+pick xs = fromMaybe _ $ fmap (.val) (find (.guard) xs)
+
+-- RulesGenerator typeclass
+class RulesGenerator a where
+  rulesGenerator :: List (Guarded a) -> Module (Rules, PulseWire)
+-- genRules module
+genRules :: (RulesGenerator a) => List (Guarded a) -> Module ()
+genRules xs = do
+  (allRules, _) <- rulesGenerator xs
+  addRules allRules
+  return ()
+
+-- Action
+--------------------------------------------------------------------------------
+-- RulesGenerator instance
+instance RulesGenerator Action where
+  rulesGenerator xs = do
+    done <- mkPulseWireOR
+    return (fold rJoin (fmap (\x -> rules {
+                                     when x.guard ==> action {
+                                       x.val;
+                                       done.send;
+                                     }
+                                   }) xs)
+           , done)
+
+-- List Action
+--------------------------------------------------------------------------------
+from :: Integer -> List Integer
+from x = x :> from (x + 1)
+type MaxListDepth = 256
+type MaxDepthSz = TLog MaxListDepth
+-- RulesGenerator instance
+instance RulesGenerator (List Action) where
+  rulesGenerator xs = do
+    step <- mkReg 0
+    done <- mkPulseWireOR
+    let rls = (flip fmap) xs $ \x ->
+         (flip fmap) (zip (from 0) x.val) $ \(idx, act) -> rules {
+          when x.guard && step == fromInteger idx ==> action {
+            act;
+            if idx == length x.val - 1
+            then action { step := 0; done.send }
+            else step := step + 1
+          }
+        }
+    return (fold rJoin (concat rls), done)
